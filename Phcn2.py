@@ -23,7 +23,7 @@ def init_db():
             created_at TEXT
         )
     """)
-  # Bảng Lượng giá & Hồ sơ khám (lưu kết quả từ Gemini)
+  # Bảng Lượng giá & Hồ sơ khám (lưu kết quả từ Gemini hoặc chẩn đoán sẵn)
   c.execute("""
         CREATE TABLE IF NOT EXISTS clinical_records (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -64,6 +64,16 @@ RED_FLAGS_DATA = {
         "Sốt, cứng cổ rõ kèm dấu hiệu màng não",
         "Tiền sử chấn thương năng lực cao",
     ],
+    "Vai": [
+        "Đau vai dữ dội kèm sốt, sưng nóng đỏ khớp (nghi ngờ viêm khớp nhiễm khuẩn)",
+        "Mất cơ lực đột ngột hoàn toàn sau chấn thương (nghi đứt gân cơ chóp xoay diện rộng)",
+        "Đau lan tỏa kèm tê buốt ngực hoặc tay trái (loại trừ bệnh lý tim mạch)",
+    ],
+    "Khớp gối": [
+        "Gối sưng to đột ngột, tràn dịch máu cấp sau chấn thương",
+        "Khóa khớp cơ học (không thể duỗi hoặc gập gối hoàn toàn)",
+        "Sốt cao kèm sưng nóng đỏ một bên khớp gối",
+    ],
 }
 
 TESTS_DATA = {
@@ -101,7 +111,120 @@ TESTS_DATA = {
             ),
             "positive": "Khoảng cách tăng dưới 5cm (giảm độ linh hoạt).",
         },
-    ]
+    ],
+    "Cột sống cổ": [
+        {
+            "name": "Nghiệm pháp ép đỉnh (Spurling Test)",
+            "purpose": "Đánh giá hội chứng rễ thần kinh cổ do chèn ép lỗ tiếp hợp",
+            "instruction": "Bệnh nhân ngồi, nghiêng và quay đầu về bên đau, người khám ấn nhẹ lực dọc trục từ trên xuống.",
+            "positive": "Đau lan tỏa xuống bả vai hoặc tay cùng bên.",
+        }
+    ],
+    "Vai": [
+        {
+            "name": "Nghiệm pháp Neer",
+            "purpose": "Đánh giá hội chứng chèn ép khoang dưới mỏm cùng vai",
+            "instruction": "Người khám cố định xương bả vai, chủ động nâng cánh tay bệnh nhân lên ở tư thế xoay trong.",
+            "positive": "Đau chói ở vùng trước ngoài vai khi tay đưa lên cao.",
+        }
+    ],
+    "Khớp gối": [
+        {
+            "name": "Nghiệm pháp bập bềnh xương bánh chè",
+            "purpose": "Đánh giá dịch tràn trong ổ khớp gối",
+            "instruction": "Dùng tay ép hai bên túi cùng cơ tứ đầu đùi, tay kia ấn xương bánh chè xuống.",
+            "positive": "Xương bánh chè có cảm giác chạm vào mặt xương đùi (bập bềnh).",
+        }
+    ],
+}
+
+# --- KHO CHẨN ĐOÁN LÂM SÀNG SẴN CÓ & BÀI TẬP PHCN ---
+BUILTIN_CLINICAL_DATA = {
+    "Cột sống thắt lưng": {
+        "diagnosis": (
+            "• **Nhận định sơ bộ:** Hội chứng thắt lưng cấp / Thoái hóa cột"
+            " sống thắt lưng / Nghi ngờ chèn ép rễ thần kinh.\n• **Cơ chế"
+            " tổn thương:** Căng cơ cạnh sống, mất vững phân đoạn hoặc quá"
+            " tải đĩa đệm vùng L4-S1."
+        ),
+        "exercises": [
+            (
+                "1. **Kéo giãn nhóm cơ dựng sống (Knees-to-chest):** Nằm ngửa,"
+                " ôm gối sát ngực nhẹ nhàng để giảm áp lực cột sống."
+            ),
+            (
+                "2. **Bài tập rắn hổ mang (Cobra stretch):** Nằm sấp, chống tay"
+                " nâng nửa thân trên lên từ từ (nếu hợp cơ chế đĩa đệm)."
+            ),
+            (
+                "3. **Ổn định cơ lõi (Core stability):** Tập gồng cơ bụng tĩnh"
+                " để bảo vệ vùng thắt lưng khi vận động."
+            ),
+        ],
+    },
+    "Cột sống cổ": {
+        "diagnosis": (
+            "• **Nhận định sơ bộ:** Hội chứng cổ - vai - gáy / Căng cơ vùng cổ"
+            " cấp / Thoái hóa đốt sống cổ.\n• **Cơ chế tổn thương:** Co thắt"
+            " cơ thang trên, cơ ức đòn chũm do sai tư thế hoặc lạnh."
+        ),
+        "exercises": [
+            (
+                "1. **Kéo giãn cơ thang trên:** Nghiêng đầu sang bên đối diện,"
+                " dùng tay kéo nhẹ nhàng giữ 15-20 giây."
+            ),
+            (
+                "2. **Thu cằm (Chin tucks):** Kéo cằm thẳng ra sau tạo cằm đôi"
+                " để giảm áp lực đốt sống cổ trên."
+            ),
+            (
+                "3. **Vận động chủ động:** Xoay, nghiêng cổ biên độ nhẹ nhàng"
+                " trong giới hạn không đau."
+            ),
+        ],
+    },
+    "Vai": {
+        "diagnosis": (
+            "• **Nhận định sơ bộ:** Viêm gân cơ chóp xoay / Hội chứng chèn ép"
+            " khoang dưới mỏm cùng vai.\n• **Cơ chế tổn thương:** Viêm hoặc"
+            " kẹt gân cơ trên gai khi dạng tay."
+        ),
+        "exercises": [
+            (
+                "1. **Con lắc Codman:** Thả lỏng vai, dùng lực thân mình đu đưa"
+                " tay theo vòng tròn nhỏ."
+            ),
+            (
+                "2. **Kéo giãn bao khớp sau:** Kéo tay đau bắt chéo qua ngực"
+                " sang bên đối diện."
+            ),
+            (
+                "3. **Tăng cường cơ chóp xoay:** Tập với dây kháng lực nhẹ khi"
+                " đã giảm đau cấp."
+            ),
+        ],
+    },
+    "Khớp gối": {
+        "diagnosis": (
+            "• **Nhận định sơ bộ:** Thoái hóa khớp gối / Hội chứng bánh chè -"
+            " đùi / Quá tải gân bánh chè.\n• **Cơ chế tổn thương:** Mất cân"
+            " bằng lực cơ tứ đầu đùi hoặc tổn thương sụn khớp."
+        ),
+        "exercises": [
+            (
+                "1. **Gồng cơ tứ đầu đùi tĩnh:** Nằm duỗi thẳng chân, gồng cơ đùi"
+                " ép sát khoeo xuống mặt giường (giữ 5-10 giây)."
+            ),
+            (
+                "2. **Nâng chân thẳng (Straight leg raise):** Nâng chân cách"
+                " mặt giường 20cm, giữ thẳng gối để mạnh cơ đùi trước."
+            ),
+            (
+                "3. **Gập duỗi gối chủ động không tải:** Ngồi mép ghế đá chân"
+                " nhẹ nhàng."
+            ),
+        ],
+    },
 }
 
 # --- GIAO DIỆN STREAMLIT ---
@@ -111,8 +234,8 @@ st.set_page_config(
 
 st.title("🩺 Trợ lý Lâm sàng PHCN tích hợp Gemini AI")
 st.markdown(
-    "Quản lý hồ sơ, thu thập dữ liệu khám, tự động chẩn đoán qua AI và hỗ trợ"
-    " trích xuất Prompt sang Gemini."
+    "Quản lý hồ sơ, chẩn đoán lâm sàng có sẵn, đề xuất bài tập PHCN và phân tích"
+    " nâng cao qua AI."
 )
 
 # --- SIDEBAR: CẤU HÌNH API KEY ---
@@ -184,7 +307,7 @@ if menu == "Quản lý Bệnh nhân":
 
 # --- CHỨC NĂNG 2: KHÁM & LƯỢNG GIÁ LÂM SÀNG ---
 elif menu == "Khám & Lượng giá Lâm sàng":
-  st.header("📋 Khám, Sàng lọc & Phân tích Lâm sàng")
+  st.header("📋 Khám, Sàng lọc & Chẩn đoán Lâm sàng")
 
   conn = sqlite3.connect(DB_NAME)
   c = conn.cursor()
@@ -242,7 +365,26 @@ elif menu == "Khám & Lượng giá Lâm sàng":
     else:
       st.info("Đang cập nhật thêm nghiệm pháp cho vùng này.")
 
-    # --- TẠO PROMPT CHUẨN ĐỂ SỬ DỤNG CHUNG ---
+    # --- 4. HIỂN THỊ CHẨN ĐOÁN LÂM SÀNG & BÀI TẬP CÓ SẴN (OFFLINE) ---
+    st.markdown("---")
+    st.markdown("### 🩺 4. Chẩn đoán lâm sàng & Bài tập PHCN (Có sẵn)")
+    builtin_info = BUILTIN_CLINICAL_DATA.get(region, {})
+
+    st.markdown(
+        f"**Nhận định chẩn đoán sơ bộ tại vùng {region}:**\n\n"
+        f"{builtin_info.get('diagnosis', 'Đang cập nhật...')}"
+    )
+
+    st.markdown("**Đề xuất bài tập PHCN tiêu chuẩn:**")
+    for ex in builtin_info.get("exercises", []):
+      st.write(f"- {ex}")
+
+    # --- 5. XỬ LÝ & PHÂN TÍCH QUA GEMINI AI (TÙY CHỌN) ---
+    st.markdown("---")
+    st.markdown("### 🤖 5. Phân tích chuyên sâu bổ sung qua Gemini AI")
+    gemini_output = ""
+
+    # Tạo prompt chuẩn
     generated_prompt = f"""Dưới góc độ chuyên gia Vật lý trị liệu và Phục hồi chức năng (PHCN), hãy tiếp nhận bộ dữ liệu khám lâm sàng sau đây và đưa ra đánh giá chuyên sâu:
 - Vùng khảo sát: {region}
 - Triệu chứng ghi nhận: {symptoms if symptoms else 'Chưa mô tả'}
@@ -254,12 +396,7 @@ Yêu cầu phân tích:
 2. Đánh giá mức độ an toàn và cảnh báo cần thiết.
 3. Đề xuất hướng can thiệp PHCN phù hợp."""
 
-    st.markdown("---")
-    st.markdown("### 4. Xử lý & Phân tích qua Gemini AI")
-    gemini_output = ""
-
-    # Nút gọi trực tiếp API
-    if st.button("🚀 Gửi dữ liệu trực tiếp sang Gemini phân tích"):
+    if st.button("🚀 Gửi dữ liệu sang Gemini phân tích thêm"):
       if not api_key_input:
         st.error("Vui lòng nhập Google Gemini API Key ở thanh bên trái.")
       elif not symptoms:
@@ -277,25 +414,26 @@ Yêu cầu phân tích:
           except Exception as e:
             st.error(f"Lỗi kết nối Gemini API: {e}")
 
-    # Mục hỗ trợ copy thủ công sang Gemini bên ngoài
-    with st.expander(
-        "📋 Hoặc bấm vào đây để lấy Prompt copy thủ công sang ứng dụng"
-        " Gemini"
-    ):
+    with st.expander("📋 Hoặc bấm vào đây để lấy Prompt copy thủ công sang Gemini"):
       st.info(
           "Bạn có thể sao chép đoạn nội dung dưới đây và dán trực tiếp vào"
-          " ứng dụng Gemini của bạn:"
+          " ứng dụng Gemini:"
       )
       st.code(generated_prompt, language="text")
 
     if gemini_output:
-      st.markdown("#### 🤖 Phản hồi từ Gemini:")
+      st.markdown("#### 🤖 Phản hồi mở rộng từ Gemini:")
       st.markdown(gemini_output)
 
-    if st.button("Lưu hồ sơ khám & Kết quả AI"):
+    if st.button("Lưu hồ sơ khám & Kết quả vào cơ sở dữ liệu"):
       exam_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
       rf_str = ", ".join(selected_red_flags)
       tr_str = str(test_results_dict)
+      combined_response = (
+          f"[Chẩn đoán sẵn có]\n{builtin_info.get('diagnosis', '')}\n\n[AI"
+          f" Response]\n{gemini_output if gemini_output else 'Chỉ dùng chẩn"
+          f" đoán sẵn có.'}"
+      )
 
       conn = sqlite3.connect(DB_NAME)
       c = conn.cursor()
@@ -311,16 +449,16 @@ Yêu cầu phân tích:
               symptoms,
               rf_str,
               tr_str,
-              gemini_output,
+              combined_response,
           ),
       )
       conn.commit()
       conn.close()
-      st.success("Đã lưu toàn bộ hồ sơ và phản hồi từ AI vào cơ sở dữ liệu!")
+      st.success("Đã lưu toàn bộ hồ sơ khám và hướng dẫn PHCN vào cơ sở dữ liệu!")
 
 # --- CHỨC NĂNG 3: THEO DÕI TIẾN TRIỂN ---
 elif menu == "Theo dõi Tiến triển":
-  st.header("📈 Lịch sử Khám & Phân tích từ Gemini")
+  st.header("📈 Lịch sử Khám & Đánh giá Lâm sàng")
 
   conn = sqlite3.connect(DB_NAME)
   c = conn.cursor()
@@ -357,7 +495,7 @@ elif menu == "Theo dõi Tiến triển":
         st.write(f"**Cờ đỏ:** {rec[3] if rec[3] else 'Không có'}")
         st.write(f"**Nghiệm pháp:** {rec[4]}")
         if rec[5]:
-          st.markdown(f"**Phân tích từ Gemini trước đó:**\n{rec[5]}")
+          st.markdown(f"**Chi tiết chẩn đoán & Hướng dẫn PHCN:**\n{rec[5]}")
         st.markdown("---")
     else:
       st.info("Bệnh nhân này chưa có bản ghi nào.")
