@@ -425,7 +425,7 @@ Yêu cầu phân tích:
       st.markdown("#### 🤖 Phản hồi mở rộng từ Gemini:")
       st.markdown(gemini_output)
 
-        if st.button("Lưu hồ sơ khám & Kết quả vào cơ sở dữ liệu"):
+    if st.button("Lưu hồ sơ khám & Kết quả vào cơ sở dữ liệu"):
       exam_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
       rf_str = ", ".join(selected_red_flags)
       tr_str = str(test_results_dict)
@@ -458,7 +458,6 @@ Yêu cầu phân tích:
       conn.commit()
       conn.close()
       st.success("Đã lưu toàn bộ hồ sơ khám và hướng dẫn PHCN vào cơ sở dữ liệu!")
-
 
 # --- CHỨC NĂNG 3: THEO DÕI TIẾN TRIỂN ---
 elif menu == "Theo dõi Tiến triển":
