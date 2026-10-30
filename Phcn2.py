@@ -111,8 +111,8 @@ st.set_page_config(
 
 st.title("🩺 Trợ lý Lâm sàng PHCN tích hợp Gemini AI")
 st.markdown(
-    "Quản lý hồ sơ, thu thập dữ liệu khám và chuyển tiếp thông tin sang Gemini"
-    " để phân tích."
+    "Quản lý hồ sơ, thu thập dữ liệu khám, tự động chẩn đoán qua AI và hỗ trợ"
+    " trích xuất Prompt sang Gemini."
 )
 
 # --- SIDEBAR: CẤU HÌNH API KEY ---
@@ -184,7 +184,7 @@ if menu == "Quản lý Bệnh nhân":
 
 # --- CHỨC NĂNG 2: KHÁM & LƯỢNG GIÁ LÂM SÀNG ---
 elif menu == "Khám & Lượng giá Lâm sàng":
-  st.header("📋 Khám, Sàng lọc & Chuyển dữ liệu sang Gemini")
+  st.header("📋 Khám, Sàng lọc & Phân tích Lâm sàng")
 
   conn = sqlite3.connect(DB_NAME)
   c = conn.cursor()
@@ -210,7 +210,9 @@ elif menu == "Khám & Lượng giá Lâm sàng":
     )
 
     st.markdown("### 2. Sàng lọc dấu hiệu cờ đỏ (Red Flags)")
-    red_flags_list = RED_FLAGS_DATA.get(region, [f"Dấu hiệu bất thường tại {region}"])
+    red_flags_list = RED_FLAGS_DATA.get(
+        region, [f"Dấu hiệu bất thường tại {region}"]
+    )
     selected_red_flags = []
     for rf in red_flags_list:
       if st.checkbox(rf, key=rf):
@@ -218,8 +220,8 @@ elif menu == "Khám & Lượng giá Lâm sàng":
 
     if selected_red_flags:
       st.error(
-          "⚠️ **CẢNH BÁO CỜ ĐỎ:** Phát hiện dấu hiệu nguy hiểm cần lưu ý khi gửi"
-          " sang AI."
+          "⚠️ **CẢNH BÁO CỜ ĐỎ:** Phát hiện dấu hiệu nguy hiểm cần lưu ý khi đánh"
+          " giá."
       )
 
     st.markdown("### 3. Nghiệm pháp lâm sàng")
@@ -240,10 +242,24 @@ elif menu == "Khám & Lượng giá Lâm sàng":
     else:
       st.info("Đang cập nhật thêm nghiệm pháp cho vùng này.")
 
+    # --- TẠO PROMPT CHUẨN ĐỂ SỬ DỤNG CHUNG ---
+    generated_prompt = f"""Dưới góc độ chuyên gia Vật lý trị liệu và Phục hồi chức năng (PHCN), hãy tiếp nhận bộ dữ liệu khám lâm sàng sau đây và đưa ra đánh giá chuyên sâu:
+- Vùng khảo sát: {region}
+- Triệu chứng ghi nhận: {symptoms if symptoms else 'Chưa mô tả'}
+- Dấu hiệu cờ đỏ (Red flags): {', '.join(selected_red_flags) if selected_red_flags else 'Không ghi nhận'}
+- Kết quả nghiệm pháp: {str(test_results_dict)}
+
+Yêu cầu phân tích:
+1. Nhận định nguyên nhân cấu trúc/cơ học tiềm ẩn.
+2. Đánh giá mức độ an toàn và cảnh báo cần thiết.
+3. Đề xuất hướng can thiệp PHCN phù hợp."""
+
+    st.markdown("---")
     st.markdown("### 4. Xử lý & Phân tích qua Gemini AI")
     gemini_output = ""
 
-    if st.button("🚀 Gửi dữ liệu sang Gemini phân tích"):
+    # Nút gọi trực tiếp API
+    if st.button("🚀 Gửi dữ liệu trực tiếp sang Gemini phân tích"):
       if not api_key_input:
         st.error("Vui lòng nhập Google Gemini API Key ở thanh bên trái.")
       elif not symptoms:
@@ -252,26 +268,25 @@ elif menu == "Khám & Lượng giá Lâm sàng":
         with st.spinner("Đang đẩy dữ liệu sang Gemini AI..."):
           try:
             client = genai.Client(api_key=api_key_input)
-            prompt = f"""
-                        Dưới góc độ chuyên gia Vật lý trị liệu và Phục hồi chức năng (PHCN), hãy tiếp nhận bộ dữ liệu khám lâm sàng sau đây và đưa ra đánh giá chuyên sâu:
-                        - Vùng khảo sát: {region}
-                        - Triệu chứng ghi nhận: {symptoms}
-                        - Dấu hiệu cờ đỏ (Red flags): {', '.join(selected_red_flags) if selected_red_flags else 'Không ghi nhận'}
-                        - Kết quả nghiệm pháp: {str(test_results_dict)}
-
-                        Yêu cầu phân tích:
-                        1. Nhận định nguyên nhân cấu trúc/cơ học tiềm ẩn.
-                        2. Đánh giá mức độ an toàn và cảnh báo cần thiết.
-                        3. Đề xuất hướng can thiệp PHCN phù hợp.
-                        """
             response = client.models.generate_content(
-                model="gemini-3.8-flash",
-                contents=prompt,
+                model="gemini-2.5-flash",
+                contents=generated_prompt,
             )
             gemini_output = response.text
             st.success("Nhận kết quả từ Gemini thành công!")
           except Exception as e:
             st.error(f"Lỗi kết nối Gemini API: {e}")
+
+    # Mục hỗ trợ copy thủ công sang Gemini bên ngoài
+    with st.expander(
+        "📋 Hoặc bấm vào đây để lấy Prompt copy thủ công sang ứng dụng"
+        " Gemini"
+    ):
+      st.info(
+          "Bạn có thể sao chép đoạn nội dung dưới đây và dán trực tiếp vào"
+          " ứng dụng Gemini của bạn:"
+      )
+      st.code(generated_prompt, language="text")
 
     if gemini_output:
       st.markdown("#### 🤖 Phản hồi từ Gemini:")
